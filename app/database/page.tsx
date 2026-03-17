@@ -5,11 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
-import { Database } from 'lucide-react';
 
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSupabase } from '@/lib/supabase';
 
 interface CompanyData {
@@ -148,16 +146,25 @@ export default function DatabasePage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-8">
-        <Card>
-          <CardHeader className="border-b border-border pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Database className="h-4 w-4 text-primary" />
-              Company Database
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-6">
+        <section className="mb-4 rounded-xl border border-border/80 bg-card px-5 py-4 sm:px-6 sm:py-5">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">GCC Database</h1>
+        </section>
+
+        <section className="relative overflow-hidden rounded-2xl border border-border/80 bg-card p-4 sm:p-5">
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+            <div className="flex h-full w-full items-center justify-center">
+              <span
+                className="-rotate-24 select-none text-center break-all leading-tight text-[34px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[46px] lg:text-[58px] max-w-[80%]"
+                style={{ opacity: 0.06 }}
+              >
+                {session.user.email}
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-20 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/30 px-4 py-3">
               <p className="text-sm text-muted-foreground">
                 Viewer: <span className="font-medium text-foreground">{session.user.email}</span>
               </p>
@@ -167,7 +174,7 @@ export default function DatabasePage() {
             </div>
 
             {error && (
-              <div className="rounded-md border border-red-300 bg-red-50 p-4">
+              <div className="rounded-xl border border-red-300 bg-red-50 p-4">
                 <p className="text-sm font-medium text-red-800">Error loading data</p>
                 <p className="mt-1 text-sm text-red-700">{error}</p>
                 <p className="mt-3 text-sm text-red-700">
@@ -184,9 +191,9 @@ export default function DatabasePage() {
               </div>
             )}
 
-            <DataTable data={data} isLoading={isLoading} emptyMessage={emptyMessage} embedded />
-          </CardContent>
-        </Card>
+            <DataTable data={data} isLoading={isLoading} emptyMessage={emptyMessage} embedded viewerEmail={session.user.email} />
+          </div>
+        </section>
       </div>
     </main>
   );

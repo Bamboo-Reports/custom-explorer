@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     reportFilePath = activeReport.file_path;
-    reportTitle = activeReport.title ?? 'Assigned Report';
+    reportTitle = activeReport.title ?? 'GCC Reports';
   }
 
   let { data: fileData, error: downloadError } = await supabase.storage
