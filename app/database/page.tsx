@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
+import { Database } from 'lucide-react';
 
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSupabase } from '@/lib/supabase';
 
 interface CompanyData {
@@ -26,12 +28,15 @@ interface CompanyData {
 }
 
 export default function DatabasePage() {
+  const router = useRouter();
   const [data, setData] = useState<CompanyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emptyMessage, setEmptyMessage] = useState<string | undefined>(undefined);
   const [session, setSession] = useState<Session | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const tableName = process.env.NEXT_PUBLIC_SUPABASE_TABLE?.trim() || 'data';
+  const schemaName = process.env.NEXT_PUBLIC_SUPABASE_SCHEMA?.trim() || 'public';
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -59,6 +64,12 @@ export default function DatabasePage() {
   }, []);
 
   useEffect(() => {
+    if (!isSessionLoading && !session) {
+      router.replace('/auth');
+    }
+  }, [isSessionLoading, session, router]);
+
+  useEffect(() => {
     const sessionUserId = session?.user?.id;
 
     if (isSessionLoading) {
@@ -74,9 +85,6 @@ export default function DatabasePage() {
     }
 
     const fetchData = async () => {
-      const tableName = process.env.NEXT_PUBLIC_SUPABASE_TABLE?.trim() || 'data';
-      const schemaName = process.env.NEXT_PUBLIC_SUPABASE_SCHEMA?.trim() || 'public';
-
       try {
         setIsLoading(true);
         setError(null);
@@ -114,69 +122,71 @@ export default function DatabasePage() {
     await supabase.auth.signOut();
   };
 
+  if (isSessionLoading || !session) {
+    return <main className="min-h-screen" />;
+  }
+
   return (
-    <main className="min-h-screen bg-[#F6FBFE]">
-      <header className="border-b border-[#6EC4EA]/40 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+    <main className="min-h-screen">
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Bamboo Reports logo" width={38} height={38} className="h-9 w-9" />
-            <p className="text-lg font-bold tracking-[0.04em] text-black">Bamboo Reports</p>
+            <Image src="/logo.svg" alt="Bamboo Reports logo" width={34} height={34} className="h-8 w-8" />
+            <p className="text-base font-semibold text-foreground">Bamboo Reports</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
               <Link href="/">Home</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/report">View Report</Link>
+              <Link href="/report">Report</Link>
             </Button>
-            {session && (
-              <>
-                <p className="hidden rounded-full border border-[#6EC4EA]/50 bg-[#6EC4EA]/20 px-3 py-1 text-sm text-[#017ABF] md:block">
-                  {session.user.email}
-                </p>
-                <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
-              </>
-            )}
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign out
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
-        {!session && !isSessionLoading && (
-          <Card className="border-[#6EC4EA]/40 bg-white shadow-none">
-            <CardHeader>
-              <CardTitle>Sign in required</CardTitle>
-              <CardDescription>
-                Please sign in to access the database viewer.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <Link href="/auth">Go to Sign In / Sign Up</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-8">
+        <Card>
+          <CardHeader className="border-b border-border pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Database className="h-4 w-4 text-primary" />
+              Company Database
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Viewer: <span className="font-medium text-foreground">{session.user.email}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Total Accounts: <span className="font-medium text-foreground">{isLoading ? 'Loading...' : data.length}</span>
+              </p>
+            </div>
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-800">Error loading data:</p>
-            <p className="mt-1 text-sm text-red-700">{error}</p>
-            <p className="mt-3 text-sm text-red-600">
-              Check <code className="bg-red-100 px-2 py-1">.env.local</code> for
-              {' '}
-              <code className="bg-red-100 px-2 py-1">NEXT_PUBLIC_SUPABASE_URL</code>,
-              {' '}
-              <code className="bg-red-100 px-2 py-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>,
-              {' '}
-              <code className="bg-red-100 px-2 py-1">NEXT_PUBLIC_SUPABASE_SCHEMA</code>,
-              {' '}
-              and <code className="bg-red-100 px-2 py-1">NEXT_PUBLIC_SUPABASE_TABLE</code>.
-            </p>
-          </div>
-        )}
+            {error && (
+              <div className="rounded-md border border-red-300 bg-red-50 p-4">
+                <p className="text-sm font-medium text-red-800">Error loading data</p>
+                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <p className="mt-3 text-sm text-red-700">
+                  Check <code className="rounded-sm bg-red-100 px-1.5 py-0.5">.env.local</code> for
+                  {' '}
+                  <code className="rounded-sm bg-red-100 px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_URL</code>,
+                  {' '}
+                  <code className="rounded-sm bg-red-100 px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>,
+                  {' '}
+                  <code className="rounded-sm bg-red-100 px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_SCHEMA</code>,
+                  {' '}
+                  and <code className="rounded-sm bg-red-100 px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_TABLE</code>.
+                </p>
+              </div>
+            )}
 
-        {session && <DataTable data={data} isLoading={isLoading} emptyMessage={emptyMessage} />}
+            <DataTable data={data} isLoading={isLoading} emptyMessage={emptyMessage} embedded />
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

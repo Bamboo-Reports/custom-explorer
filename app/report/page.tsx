@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { ChevronLeft, ChevronRight, FileText, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSupabase } from '@/lib/supabase';
 
 const PDFJS_SCRIPT = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -66,6 +67,7 @@ function loadPdfJs() {
 }
 
 export default function ReportPage() {
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [isReportLoading, setIsReportLoading] = useState(false);
@@ -75,7 +77,7 @@ export default function ReportPage() {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(1);
-  const [zoom, setZoom] = useState(1.2);
+  const [zoom, setZoom] = useState(0.8);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reportUrlRef = useRef<string | null>(null);
 
@@ -177,6 +179,12 @@ export default function ReportPage() {
   }, [session?.access_token]);
 
   useEffect(() => {
+    if (!isSessionLoading && !session) {
+      router.replace('/auth');
+    }
+  }, [isSessionLoading, session, router]);
+
+  useEffect(() => {
     return () => {
       if (reportUrlRef.current) {
         URL.revokeObjectURL(reportUrlRef.current);
@@ -258,132 +266,116 @@ export default function ReportPage() {
     await supabase.auth.signOut();
   };
 
+  if (isSessionLoading || !session) {
+    return <main className="min-h-screen" />;
+  }
+
   return (
-    <main className="min-h-screen bg-[#F6FBFE]">
-      <header className="border-b border-[#6EC4EA]/40 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+    <main className="min-h-screen">
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Bamboo Reports logo" width={38} height={38} className="h-9 w-9" />
-            <p className="text-lg font-bold tracking-[0.04em] text-black">Bamboo Reports</p>
+            <Image src="/logo.svg" alt="Bamboo Reports logo" width={34} height={34} className="h-8 w-8" />
+            <p className="text-base font-semibold text-foreground">Bamboo Reports</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
               <Link href="/">Home</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/database">View Database</Link>
+              <Link href="/database">Database</Link>
             </Button>
-            {session && <Button variant="outline" onClick={handleSignOut}>Sign out</Button>}
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign out
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
-        {!session && !isSessionLoading && (
-          <Card className="border-[#6EC4EA]/40 bg-white shadow-none">
-            <CardHeader>
-              <CardTitle>Sign in required</CardTitle>
-              <CardDescription>
-                Please sign in to view your report.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <Link href="/auth">Go to Sign In / Sign Up</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {session && (
-          <Card className="border-[#6EC4EA]/40 bg-white shadow-none">
-            <CardHeader className="border-b border-[#6EC4EA]/30">
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <FileText className="h-5 w-5 text-[#F17C1D]" />
-                {reportTitle}
-              </CardTitle>
-              <CardDescription>Custom in-app viewer. Download and print shortcuts are disabled.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#6EC4EA]/35 bg-[#F6FBFE] px-4 py-3">
-                <div className="text-sm text-slate-600">
-                  Viewer access: <span className="font-medium text-slate-800">{viewerName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom((z) => Math.max(0.7, Number((z - 0.1).toFixed(2))))}
-                    disabled={!pdfDoc}
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-16 text-center text-sm text-slate-600">{Math.round(zoom * 100)}%</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}
-                    disabled={!pdfDoc}
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                  <div className="mx-2 h-6 w-px bg-[#6EC4EA]/40" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
-                    disabled={!pdfDoc || pageNumber <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-20 text-center text-sm text-slate-600">
-                    {pdfDoc ? `${pageNumber} / ${pageCount}` : '0 / 0'}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))}
-                    disabled={!pdfDoc || pageNumber >= pageCount}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-8">
+        <Card>
+          <CardHeader className="border-b border-border pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-4 w-4 text-primary" />
+              {reportTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Viewer: <span className="font-medium text-foreground">{viewerName}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setZoom((z) => Math.max(0.7, Number((z - 0.1).toFixed(2))))}
+                  disabled={!pdfDoc}
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="min-w-14 text-center text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}
+                  disabled={!pdfDoc}
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <div className="mx-1 h-6 w-px bg-border" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
+                  disabled={!pdfDoc || pageNumber <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="min-w-16 text-center text-sm text-muted-foreground">
+                  {pdfDoc ? `${pageNumber} / ${pageCount}` : '0 / 0'}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))}
+                  disabled={!pdfDoc || pageNumber >= pageCount}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              <div
-                className="relative overflow-auto rounded-xl border border-[#6EC4EA]/35 bg-slate-100 p-4"
-                onContextMenu={(event) => event.preventDefault()}
-              >
-                {isReportLoading && (
-                  <div className="flex min-h-[420px] items-center justify-center text-sm text-slate-600">
-                    Loading your report...
-                  </div>
-                )}
+            <div className="relative overflow-auto rounded-md border border-border bg-muted/50 p-4" onContextMenu={(event) => event.preventDefault()}>
+              {isReportLoading && (
+                <div className="flex min-h-[420px] items-center justify-center text-sm text-muted-foreground">
+                  Loading your report...
+                </div>
+              )}
 
-                {!isReportLoading && reportMissing && (
-                  <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-slate-600">
-                    No report assigned yet. Contact your administrator.
-                  </div>
-                )}
+              {!isReportLoading && reportMissing && (
+                <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-muted-foreground">
+                  No report assigned yet. Contact your administrator.
+                </div>
+              )}
 
-                {!isReportLoading && error && (
-                  <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-red-600">
-                    {error}
-                  </div>
-                )}
+              {!isReportLoading && error && (
+                <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
-                {!isReportLoading && !reportMissing && !error && (
-                  <div className="relative mx-auto w-fit">
-                    <canvas ref={canvasRef} className="mx-auto max-w-full rounded-md border border-slate-300 bg-white shadow-sm" />
-                    <div className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-white/80 px-2 py-1 text-[10px] font-medium text-slate-500">
-                      {viewerName}
-                    </div>
+              {!isReportLoading && !reportMissing && !error && (
+                <div className="relative mx-auto w-fit">
+                  <canvas ref={canvasRef} className="mx-auto max-w-full border border-border bg-white" />
+                  <div className="pointer-events-none absolute bottom-2 right-2 bg-white/85 px-2 py-1 text-[10px] text-muted-foreground">
+                    {viewerName}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
