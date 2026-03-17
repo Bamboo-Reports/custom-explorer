@@ -5,10 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
-import { Database, FileText } from 'lucide-react';
+import { ArrowUpRight, Database, FileText } from 'lucide-react';
 
 import { getSupabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function Home() {
@@ -120,39 +119,51 @@ export default function Home() {
       </header>
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-8">
-        <section className="mb-6 rounded-lg border border-border bg-card p-5">
-          <h1 className="text-2xl font-semibold text-foreground">Welcome back, {displayName}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Choose a workspace to continue.</p>
+        <section className="relative mb-6 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 sm:p-7">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(241,124,29,0.12),transparent_45%)]" />
+          <div className="relative text-center sm:text-left">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Workspace</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">Welcome back, {displayName}</h1>
+            <p className="mt-2 text-base text-muted-foreground">Choose a workspace to continue.</p>
+          </div>
         </section>
 
-        <section className="grid gap-5 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Database className="h-4 w-4 text-primary" />
-                Company Database
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <Link href="/database">Open database</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <section className="mx-auto flex w-full max-w-[620px] flex-col gap-3">
+          <Link
+            href="/database"
+            className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card p-6 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_18px_35px_-28px_rgba(241,124,29,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.07] to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            <div className="relative flex flex-col items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+                <Database className="h-9 w-9 text-primary" />
+              </div>
+              <h2 className="text-3xl font-semibold leading-none tracking-tight text-foreground">GCC Database</h2>
+              <p className="max-w-sm text-sm text-muted-foreground">Open company records and account information.</p>
+              <span className="inline-flex min-h-11 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors duration-200 group-hover:bg-primary/90">
+                Open database
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
+          </Link>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="h-4 w-4 text-primary" />
-                Assigned Report
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <Link href="/report">Open report</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <Link
+            href="/report"
+            className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card p-6 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_18px_35px_-28px_rgba(241,124,29,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.07] to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            <div className="relative flex flex-col items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+                <FileText className="h-9 w-9 text-primary" />
+              </div>
+              <h2 className="text-3xl font-semibold leading-none tracking-tight text-foreground">GCC Reports</h2>
+              <p className="max-w-sm text-sm text-muted-foreground">View assigned reports and generated output.</p>
+              <span className="inline-flex min-h-11 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors duration-200 group-hover:bg-primary/90">
+                Open report
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
+          </Link>
         </section>
       </div>
     </main>

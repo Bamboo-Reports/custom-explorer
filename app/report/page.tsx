@@ -5,10 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
-import { ChevronLeft, ChevronRight, FileText, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getSupabase } from '@/lib/supabase';
 
 const PDFJS_SCRIPT = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -73,7 +73,7 @@ export default function ReportPage() {
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportMissing, setReportMissing] = useState(false);
-  const [reportTitle, setReportTitle] = useState('Assigned Report');
+  const [reportTitle, setReportTitle] = useState('GCC Reports');
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(1);
@@ -260,6 +260,7 @@ export default function ReportPage() {
 
     return session?.user?.email || 'Authenticated user';
   }, [session?.user?.email, session?.user?.user_metadata?.fullName, session?.user?.user_metadata?.full_name]);
+  const viewerEmail = session?.user?.email || 'authenticated user';
 
   const handleSignOut = async () => {
     const supabase = getSupabase();
@@ -292,90 +293,101 @@ export default function ReportPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-8">
-        <Card>
-          <CardHeader className="border-b border-border pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-4 w-4 text-primary" />
-              {reportTitle}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
-              <p className="text-sm text-muted-foreground">
-                Viewer: <span className="font-medium text-foreground">{viewerName}</span>
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setZoom((z) => Math.max(0.7, Number((z - 0.1).toFixed(2))))}
-                  disabled={!pdfDoc}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="min-w-14 text-center text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}
-                  disabled={!pdfDoc}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <div className="mx-1 h-6 w-px bg-border" />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
-                  disabled={!pdfDoc || pageNumber <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="min-w-16 text-center text-sm text-muted-foreground">
-                  {pdfDoc ? `${pageNumber} / ${pageCount}` : '0 / 0'}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))}
-                  disabled={!pdfDoc || pageNumber >= pageCount}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-6">
+        <section className="mb-4 rounded-xl border border-border/80 bg-card px-5 py-4 sm:px-6 sm:py-5">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{reportTitle}</h1>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/30 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Viewer: <span className="font-medium text-foreground">{viewerName}</span>
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoom((z) => Math.max(0.7, Number((z - 0.1).toFixed(2))))}
+                disabled={!pdfDoc}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="min-w-14 text-center text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoom((z) => Math.min(2.5, Number((z + 0.1).toFixed(2))))}
+                disabled={!pdfDoc}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <div className="mx-1 h-6 w-px bg-border" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
+                disabled={!pdfDoc || pageNumber <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="min-w-16 text-center text-sm text-muted-foreground">
+                {pdfDoc ? `${pageNumber} / ${pageCount}` : '0 / 0'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))}
+                disabled={!pdfDoc || pageNumber >= pageCount}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
 
-            <div className="relative overflow-auto rounded-md border border-border bg-muted/50 p-4" onContextMenu={(event) => event.preventDefault()}>
-              {isReportLoading && (
-                <div className="flex min-h-[420px] items-center justify-center text-sm text-muted-foreground">
-                  Loading your report...
+          <div className="relative overflow-auto rounded-xl border border-border/80 bg-muted/40 p-3 sm:p-4" onContextMenu={(event) => event.preventDefault()}>
+            {isReportLoading && (
+              <div className="mx-auto flex min-h-[420px] w-full max-w-[760px] flex-col gap-4 rounded-lg border border-border/70 bg-background/80 p-4 sm:p-5">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-6 w-24" />
                 </div>
-              )}
-
-              {!isReportLoading && reportMissing && (
-                <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-muted-foreground">
-                  No report assigned yet. Contact your administrator.
+                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-[460px] w-full rounded-md" />
+                <div className="flex justify-end">
+                  <Skeleton className="h-4 w-28" />
                 </div>
-              )}
+              </div>
+            )}
 
-              {!isReportLoading && error && (
-                <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+            {!isReportLoading && reportMissing && (
+              <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-muted-foreground">
+                No report assigned yet. Contact your administrator.
+              </div>
+            )}
 
-              {!isReportLoading && !reportMissing && !error && (
-                <div className="relative mx-auto w-fit">
-                  <canvas ref={canvasRef} className="mx-auto max-w-full border border-border bg-white" />
-                  <div className="pointer-events-none absolute bottom-2 right-2 bg-white/85 px-2 py-1 text-[10px] text-muted-foreground">
-                    {viewerName}
+            {!isReportLoading && error && (
+              <div className="flex min-h-[420px] items-center justify-center text-center text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {!isReportLoading && !reportMissing && !error && (
+              <div className="relative mx-auto w-fit">
+                <div aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+                  <div className="flex h-full w-full items-center justify-center">
+                    <span
+                      className="-rotate-24 select-none text-center break-all leading-tight text-base font-semibold tracking-[0.08em] text-gray-500 sm:text-lg lg:text-[22px] max-w-[80%]"
+                      style={{ opacity: 0.06 }}
+                    >
+                      {viewerEmail}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <canvas ref={canvasRef} className="mx-auto max-w-full rounded-md border border-border bg-white shadow-[0_12px_30px_-24px_rgba(0,0,0,0.6)]" />
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );

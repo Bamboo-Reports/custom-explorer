@@ -10,7 +10,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
-  ChevronRight,
+  ChevronsRight,
   ExternalLink,
   Globe2,
   Landmark,
@@ -30,6 +30,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface CompanyData {
@@ -52,9 +53,10 @@ interface DataTableProps {
   isLoading: boolean;
   emptyMessage?: string;
   embedded?: boolean;
+  viewerEmail?: string;
 }
 
-const ROWS_PER_PAGE = 13;
+const ROWS_PER_PAGE = 10;
 type SortDirection = 'asc' | 'desc';
 type SortKey = 'parent_company_name' | 'industry' | 'revenue_range' | 'location' | 'website';
 const LOGO_DEV_PUBLIC_KEY = process.env.NEXT_PUBLIC_LOGO_DEV_KEY || 'pk_GAZeDBqlSWS8CSE3PZ8WeA';
@@ -90,13 +92,13 @@ function getDomainFromWebsite(website: string | undefined) {
   }
 }
 
-function CompanyLogo({ domain, companyName, size = 28 }: { domain: string; companyName: string; size?: number }) {
+function CompanyLogo({ domain, companyName, size = 36 }: { domain: string; companyName: string; size?: number }) {
   const fallbackChar = (companyName || '?').trim().charAt(0).toUpperCase();
 
   if (!domain) {
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-sm border border-border bg-muted text-xs font-semibold text-muted-foreground"
+        className="flex shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-muted-foreground"
         style={{ width: size, height: size }}
       >
         {fallbackChar}
@@ -105,13 +107,13 @@ function CompanyLogo({ domain, companyName, size = 28 }: { domain: string; compa
   }
 
   return (
-    <div className="shrink-0 overflow-hidden rounded-sm border border-border bg-white" style={{ width: size, height: size }}>
+    <div className="shrink-0 overflow-hidden rounded-full border border-border bg-white p-1" style={{ width: size, height: size }}>
       <Image
         src={`https://img.logo.dev/${domain}?token=${LOGO_DEV_PUBLIC_KEY}`}
         alt={`${companyName || 'Company'} logo`}
         width={size}
         height={size}
-        className="object-contain"
+        className="h-full w-full object-contain"
       />
     </div>
   );
@@ -127,12 +129,12 @@ function DetailField({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3">
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="rounded-xl border border-border/80 bg-background/80 p-3.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}
         {label}
       </p>
-      <p className="mt-1.5 text-sm font-medium text-foreground">{value || 'N/A'}</p>
+      <p className="mt-2 break-words text-sm leading-6 font-medium text-foreground">{value || 'N/A'}</p>
     </div>
   );
 }
@@ -146,7 +148,7 @@ function hasVisibleValue(value: string | undefined) {
   return normalized !== '' && normalized !== 'n/a' && normalized !== 'na';
 }
 
-export function DataTable({ data, isLoading, emptyMessage, embedded = false }: DataTableProps) {
+export function DataTable({ data, isLoading, emptyMessage, embedded = false, viewerEmail }: DataTableProps) {
   const [selectedRow, setSelectedRow] = useState<CompanyData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('parent_company_name');
@@ -212,15 +214,60 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
     return `Showing ${start}-${end} of ${sortedData.length} ${sortedData.length === 1 ? 'record' : 'records'}`;
   }, [currentPage, sortedData.length]);
 
-  const shellClass = embedded ? 'rounded-md border border-border bg-muted/50 p-4' : '';
+  const shellClass = '';
 
   if (isLoading) {
     return (
       <div className={shellClass}>
-        <Card className={embedded ? 'rounded-md p-6' : 'rounded-lg p-8'}>
-          <div className="flex items-center justify-center gap-3 text-muted-foreground">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
-            <span className="text-sm">Loading data...</span>
+        <Card className={embedded ? 'gap-0 overflow-hidden rounded-xl p-0' : 'gap-0 overflow-hidden rounded-lg p-0'}>
+          <div className="overflow-auto">
+            <Table className="min-w-[980px] table-fixed border-separate border-spacing-0">
+              <colgroup>
+                <col className="w-[300px]" />
+                <col className="w-[220px]" />
+                <col className="w-[180px]" />
+                <col className="w-[200px]" />
+                <col className="w-[240px]" />
+              </colgroup>
+              <TableHeader>
+                <TableRow className="h-14 border-b border-border bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="h-14 bg-muted/60 text-xs font-semibold tracking-[0.08em] uppercase">Company</TableHead>
+                  <TableHead className="h-14 bg-muted/60 text-xs font-semibold tracking-[0.08em] uppercase">Industry</TableHead>
+                  <TableHead className="h-14 bg-muted/60 text-xs font-semibold tracking-[0.08em] uppercase">Revenue</TableHead>
+                  <TableHead className="h-14 bg-muted/60 text-xs font-semibold tracking-[0.08em] uppercase">Location</TableHead>
+                  <TableHead className="h-14 bg-muted/60 text-xs font-semibold tracking-[0.08em] uppercase">Website</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="[&_tr_td]:border-b [&_tr_td]:border-border/80">
+                {Array.from({ length: ROWS_PER_PAGE }).map((_, index) => (
+                  <TableRow key={index} className="h-16">
+                    <TableCell>
+                      <div className="flex items-center gap-3 px-1 py-2">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <Skeleton className="h-4 w-[160px]" />
+                        <Skeleton className="ml-auto h-4 w-4" />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[150px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[110px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[120px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[160px]" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between border-t border-border bg-muted/20 px-5 py-4">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="h-8 w-56 rounded-full" />
           </div>
         </Card>
       </div>
@@ -230,7 +277,7 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
   if (data.length === 0) {
     return (
       <div className={shellClass}>
-        <Card className={embedded ? 'rounded-md p-6' : 'rounded-lg p-8'}>
+        <Card className={embedded ? 'rounded-xl p-6' : 'rounded-lg p-8'}>
           <div className="flex items-center justify-center text-center text-sm text-muted-foreground">
             {emptyMessage || 'No data available'}
           </div>
@@ -242,15 +289,22 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
   return (
     <>
       <div className={shellClass}>
-        <Card className={embedded ? 'gap-0 overflow-hidden rounded-md p-0' : 'gap-0 overflow-hidden rounded-lg p-0'}>
+        <Card className={embedded ? 'gap-0 overflow-hidden rounded-xl p-0' : 'gap-0 overflow-hidden rounded-lg p-0'}>
           <div className="overflow-auto">
-            <Table className="min-w-[980px] border-separate border-spacing-0">
+            <Table className="min-w-[980px] table-fixed border-separate border-spacing-0">
+              <colgroup>
+                <col className="w-[300px]" />
+                <col className="w-[220px]" />
+                <col className="w-[180px]" />
+                <col className="w-[200px]" />
+                <col className="w-[240px]" />
+              </colgroup>
               <TableHeader>
-                <TableRow className="border-b border-border bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="sticky top-0 z-20 w-[280px] bg-muted/60">
+                <TableRow className="h-14 border-b border-border bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="sticky top-0 z-20 h-14 bg-muted/60">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                      className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] uppercase text-foreground"
                       onClick={() => handleSort('parent_company_name')}
                       aria-label="Sort by company name"
                     >
@@ -262,10 +316,10 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-[220px] bg-muted/60">
+                  <TableHead className="sticky top-0 z-20 h-14 bg-muted/60">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                      className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] uppercase text-foreground"
                       onClick={() => handleSort('industry')}
                       aria-label="Sort by industry"
                     >
@@ -277,10 +331,10 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-[160px] bg-muted/60">
+                  <TableHead className="sticky top-0 z-20 h-14 bg-muted/60">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                      className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] uppercase text-foreground"
                       onClick={() => handleSort('revenue_range')}
                       aria-label="Sort by revenue range"
                     >
@@ -292,10 +346,10 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-[180px] bg-muted/60">
+                  <TableHead className="sticky top-0 z-20 h-14 bg-muted/60">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                      className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] uppercase text-foreground"
                       onClick={() => handleSort('location')}
                       aria-label="Sort by location"
                     >
@@ -307,10 +361,10 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-[220px] bg-muted/60">
+                  <TableHead className="sticky top-0 z-20 h-14 bg-muted/60">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                      className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] uppercase text-foreground"
                       onClick={() => handleSort('website')}
                       aria-label="Sort by website"
                     >
@@ -329,31 +383,46 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                   const domain = getDomainFromWebsite(row.website);
 
                   return (
-                    <TableRow key={row.id || index} className="hover:bg-muted/20">
+                    <TableRow key={row.id || index} className="h-16 hover:bg-muted/20">
                       <TableCell className="font-medium text-foreground">
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2 rounded-sm px-1 py-1 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex w-full items-center gap-3 rounded-sm px-1 py-2 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => setSelectedRow(row)}
                           aria-label={`View details for ${row.parent_company_name || 'company'}`}
                         >
                           <CompanyLogo domain={domain} companyName={row.parent_company_name} />
-                          <span className="block flex-1 truncate">{row.parent_company_name || 'N/A'}</span>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                          <span className="block flex-1 truncate" title={row.parent_company_name || 'N/A'}>
+                            {row.parent_company_name || 'N/A'}
+                          </span>
+                          <ChevronsRight className="animate-chevron-loop h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                         </button>
                       </TableCell>
-                      <TableCell className="text-sm text-foreground">{row.industry || 'N/A'}</TableCell>
-                      <TableCell className="text-sm text-foreground">{row.revenue_range || 'N/A'}</TableCell>
-                      <TableCell className="text-sm text-foreground">{row.location || 'N/A'}</TableCell>
+                      <TableCell className="text-sm text-foreground">
+                        <span className="block truncate" title={row.industry || 'N/A'}>
+                          {row.industry || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground">
+                        <span className="block truncate" title={row.revenue_range || 'N/A'}>
+                          {row.revenue_range || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground">
+                        <span className="block truncate" title={row.location || 'N/A'}>
+                          {row.location || 'N/A'}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         {row.website ? (
                           <a
                             href={withProtocol(row.website)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+                            className="inline-flex max-w-full items-center gap-1 text-sm text-accent hover:underline"
+                            title={row.website}
                           >
-                            <span className="max-w-[180px] truncate">{row.website}</span>
+                            <span className="block max-w-[200px] truncate">{row.website}</span>
                             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                           </a>
                         ) : (
@@ -461,25 +530,35 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
       </div>
 
       <Dialog open={!!selectedRow} onOpenChange={(open) => !open && setSelectedRow(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-4xl">
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+            <div className="flex h-full w-full items-center justify-center">
+              <span
+                className="-rotate-24 select-none text-center break-all leading-tight text-base font-semibold tracking-[0.08em] text-gray-500 sm:text-lg lg:text-[22px] max-w-[80%]"
+                style={{ opacity: 0.06 }}
+              >
+                {viewerEmail || 'authenticated user'}
+              </span>
+            </div>
+          </div>
           {selectedRow && (
-            <>
+            <div className="relative z-20">
               {(() => {
                 const selectedDomain = getDomainFromWebsite(selectedRow.website);
 
                 return (
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
-                      <CompanyLogo domain={selectedDomain} companyName={selectedRow.parent_company_name} size={36} />
-                      <span>{selectedRow.parent_company_name || 'Company details'}</span>
+                  <DialogHeader className="border-b border-border/80 bg-[radial-gradient(circle_at_top_right,rgba(241,124,29,0.14),transparent_40%)] px-6 py-5">
+                    <DialogTitle className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
+                      <CompanyLogo domain={selectedDomain} companyName={selectedRow.parent_company_name} size={44} />
+                      <span className="break-words">{selectedRow.parent_company_name || 'Company details'}</span>
                     </DialogTitle>
                   </DialogHeader>
                 );
               })()}
 
-              <div className="grid gap-4 py-2">
-                <section className="rounded-md border border-border p-4">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <div className="grid max-h-[calc(88vh-132px)] gap-4 overflow-y-auto px-6 py-5">
+                <section className="rounded-xl border border-border/80 bg-muted/[0.22] p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] text-foreground uppercase">
                     <Building2 className="h-4 w-4 text-primary" aria-hidden="true" />
                     Core Profile
                   </h3>
@@ -492,8 +571,8 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                   </div>
                 </section>
 
-                <section className="rounded-md border border-border p-4">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <section className="rounded-xl border border-border/80 bg-muted/[0.22] p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] text-foreground uppercase">
                     <Network className="h-4 w-4 text-primary" aria-hidden="true" />
                     India Operations
                   </h3>
@@ -508,15 +587,15 @@ export function DataTable({ data, isLoading, emptyMessage, embedded = false }: D
                   </div>
                 </section>
 
-                <section className="rounded-md border border-border p-4">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <section className="rounded-xl border border-border/80 bg-muted/[0.22] p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] text-foreground uppercase">
                     <BriefcaseBusiness className="h-4 w-4 text-primary" aria-hidden="true" />
                     Capabilities
                   </h3>
                   <DetailField label="Services Offered" value={selectedRow.services_offered} icon={BriefcaseBusiness} />
                 </section>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
