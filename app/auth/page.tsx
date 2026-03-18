@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
-import { getSupabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,14 +27,20 @@ export default function AuthPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = getSupabase();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: signInEmail,
-        password: signInPassword,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: signInEmail,
+          password: signInPassword,
+        }),
       });
 
-      if (signInError) {
-        throw signInError;
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || 'Sign in failed');
       }
 
       router.push('/');
@@ -51,7 +56,7 @@ export default function AuthPage() {
   return (
     <main className="min-h-screen">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
+        <div className="mx-auto flex w-full max-w-[1250px] items-center justify-between gap-4 px-6 py-4">
           <h1 className="text-xl font-semibold text-foreground">Account Access</h1>
           <Button variant="outline" asChild>
             <Link href="/">Back to dashboard</Link>
@@ -59,7 +64,7 @@ export default function AuthPage() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-[1200px] justify-center px-6 py-10">
+      <div className="mx-auto flex w-full max-w-[1250px] justify-center px-6 py-10">
         <Card className="w-full max-w-[520px]">
           <CardHeader className="text-center">
             <Image src="/logo.svg" alt="Bamboo Reports logo" width={54} height={54} className="mx-auto block h-12 w-12" />

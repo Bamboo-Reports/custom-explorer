@@ -4,12 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import type { Session } from '@supabase/supabase-js';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getSupabase } from '@/lib/supabase';
 
 const PDFJS_SCRIPT = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -19,6 +17,12 @@ interface PdfJsLib {
   getDocument: (source: { url: string }) => {
     promise: Promise<any>;
   };
+}
+
+interface SessionUser {
+  id: string;
+  email: string;
+  fullName?: string;
 }
 
 declare global {
@@ -68,7 +72,7 @@ function loadPdfJs() {
 
 export default function ReportPage() {
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,36 +82,42 @@ export default function ReportPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(1);
   const [zoom, setZoom] = useState(0.8);
+  const [isPdfReady, setIsPdfReady] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reportUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const supabase = getSupabase();
-
     const loadSession = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      setSession(sessionData.session);
-      setIsSessionLoading(false);
+      try {
+        const response = await fetch('/api/auth/session', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          setSessionUser(null);
+          return;
+        }
+
+        const payload = (await response.json()) as { user?: SessionUser };
+        setSessionUser(payload.user || null);
+      } catch {
+        setSessionUser(null);
+      } finally {
+        setIsSessionLoading(false);
+      }
     };
 
     loadSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, activeSession) => {
-      if (event === 'TOKEN_REFRESHED') {
-        return;
-      }
-      setSession(activeSession);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   useEffect(() => {
-    if (!session?.access_token) {
+    if (!isSessionLoading && !sessionUser) {
+      router.replace('/auth');
+    }
+  }, [isSessionLoading, sessionUser, router]);
+
+  useEffect(() => {
+    if (!sessionUser) {
       return;
     }
 
@@ -117,18 +127,29 @@ export default function ReportPage() {
       setIsReportLoading(true);
       setError(null);
       setReportMissing(false);
+      setIsPdfReady(false);
+      setPdfDoc(null);
+      setPageNumber(1);
+      setPageCount(1);
 
       try {
         const response = await fetch('/api/report/current', {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          cache: 'no-store',
         });
+
+        if (response.status === 401) {
+          if (!isCancelled) {
+            setSessionUser(null);
+            router.replace('/auth');
+          }
+          return;
+        }
 
         if (response.status === 404) {
           if (!isCancelled) {
             setReportMissing(true);
             setPdfDoc(null);
+            setIsPdfReady(false);
           }
           return;
         }
@@ -163,6 +184,7 @@ export default function ReportPage() {
         if (!isCancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load report');
           setPdfDoc(null);
+          setIsPdfReady(false);
         }
       } finally {
         if (!isCancelled) {
@@ -176,13 +198,7 @@ export default function ReportPage() {
     return () => {
       isCancelled = true;
     };
-  }, [session?.access_token]);
-
-  useEffect(() => {
-    if (!isSessionLoading && !session) {
-      router.replace('/auth');
-    }
-  }, [isSessionLoading, session, router]);
+  }, [sessionUser, router]);
 
   useEffect(() => {
     return () => {
@@ -238,6 +254,10 @@ export default function ReportPage() {
           canvasContext: context,
           viewport,
         }).promise;
+
+        if (!isCancelled) {
+          setIsPdfReady(true);
+        }
       } catch {
         if (!isCancelled) {
           setError('Failed to render this page.');
@@ -253,28 +273,28 @@ export default function ReportPage() {
   }, [pageNumber, pdfDoc, zoom]);
 
   const viewerName = useMemo(() => {
-    const metadataName = session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.fullName;
-    if (typeof metadataName === 'string' && metadataName.trim()) {
-      return metadataName.trim();
+    if (sessionUser?.fullName?.trim()) {
+      return sessionUser.fullName.trim();
     }
 
-    return session?.user?.email || 'Authenticated user';
-  }, [session?.user?.email, session?.user?.user_metadata?.fullName, session?.user?.user_metadata?.full_name]);
-  const viewerEmail = session?.user?.email || 'authenticated user';
+    return sessionUser?.email || 'Authenticated user';
+  }, [sessionUser?.email, sessionUser?.fullName]);
+  const viewerEmail = sessionUser?.email || 'authenticated user';
 
   const handleSignOut = async () => {
-    const supabase = getSupabase();
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/auth');
+    router.refresh();
   };
 
-  if (isSessionLoading || !session) {
+  if (isSessionLoading || !sessionUser) {
     return <main className="min-h-screen" />;
   }
 
   return (
     <main className="min-h-screen">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
+        <div className="mx-auto flex w-full max-w-[1250px] items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
             <Image src="/logo.svg" alt="Bamboo Reports logo" width={34} height={34} className="h-8 w-8" />
             <p className="text-base font-semibold text-foreground">Bamboo Reports</p>
@@ -293,7 +313,7 @@ export default function ReportPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-6">
+      <div className="mx-auto w-full max-w-[1250px] px-6 py-6">
         <section className="mb-4 rounded-xl border border-border/80 bg-card px-5 py-4 sm:px-6 sm:py-5">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">{reportTitle}</h1>
         </section>
@@ -372,7 +392,16 @@ export default function ReportPage() {
             )}
 
             {!isReportLoading && !reportMissing && !error && (
-              <div className="relative mx-auto w-fit">
+              <>
+                {!isPdfReady && (
+                  <div className="mx-auto flex min-h-[420px] w-full max-w-[760px] items-center justify-center rounded-lg border border-border/70 bg-background/80">
+                    <p className="text-sm text-muted-foreground">Preparing PDF...</p>
+                  </div>
+                )}
+
+                <div
+                  className={`relative mx-auto w-fit transition-all duration-300 ease-out ${isPdfReady ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-1 opacity-0'}`}
+                >
                 <div aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
                   <div className="flex h-full w-full items-center justify-center">
                     <span
@@ -384,7 +413,8 @@ export default function ReportPage() {
                   </div>
                 </div>
                 <canvas ref={canvasRef} className="mx-auto max-w-full rounded-md border border-border bg-white shadow-[0_12px_30px_-24px_rgba(0,0,0,0.6)]" />
-              </div>
+                </div>
+              </>
             )}
           </div>
         </section>
